@@ -1,8 +1,7 @@
 import { config } from "dotenv";
 import { Pool } from "pg";
-import OpenAI from "openai";
+import { embedTexts } from "../lib/embeddings";
 
-const EMBEDDING_MODEL = "text-embedding-3-small";
 const BATCH_SIZE = 100;
 
 interface PlaceRow {
@@ -74,7 +73,6 @@ async function main() {
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false },
   });
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   try {
     const { rows } = await pool.query<PlaceRow>(`
@@ -89,16 +87,12 @@ async function main() {
     for (let i = 0; i < rows.length; i += BATCH_SIZE) {
       const batch = rows.slice(i, i + BATCH_SIZE);
       const searchTexts = batch.map(buildSearchText);
-
-      const response = await openai.embeddings.create({
-        model: EMBEDDING_MODEL,
-        input: searchTexts,
-      });
+      const embeddings = await embedTexts(searchTexts);
 
       for (let j = 0; j < batch.length; j++) {
         const place = batch[j];
         const searchText = searchTexts[j];
-        const embedding = response.data[j].embedding;
+        const embedding = embeddings[j];
         const vectorLiteral = `[${embedding.join(",")}]`;
 
         await pool.query(`UPDATE places SET search_text = $1, embedding = $2::vector WHERE id = $3`, [

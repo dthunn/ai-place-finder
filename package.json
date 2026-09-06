@@ -8,15 +8,24 @@
     "start": "next start",
     "lint": "eslint",
     "import-osm": "tsx scripts/import-osm.ts",
-    "generate-embeddings": "tsx scripts/generate-embeddings.ts"
+    "generate-embeddings": "tsx scripts/generate-embeddings.ts",
+    "postinstall": "cp node_modules/maplibre-gl/dist/maplibre-gl-worker.mjs node_modules/maplibre-gl/dist/maplibre-gl-shared.mjs public/"
   },
   "dependencies": {
+    "@ai-sdk/google": "^4.0.64",
+    "@ai-sdk/openai": "^4.0.60",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.38.4",
+    "ai": "^7.0.93",
     "dotenv": "^17.4.2",
+    "lucide-react": "^1.41.0",
+    "maplibre-gl": "^6.7.0",
     "next": "16.3.4",
-    "openai": "^7.10.0",
     "pg": "^8.23.0",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "react-toastify": "^11.1.0",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
