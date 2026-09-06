@@ -3,8 +3,7 @@ import { Redis } from '@upstash/redis'
 
 export const ratelimit = new Ratelimit({
   redis: Redis.fromEnv(),
-  // limiter: Ratelimit.slidingWindow(130, '1 d'),
-  limiter: Ratelimit.slidingWindow(10, '60 s'),
+  limiter: Ratelimit.slidingWindow(20, '1 d'),
   analytics: true,
   prefix: 'ai-place-finder',
 })
