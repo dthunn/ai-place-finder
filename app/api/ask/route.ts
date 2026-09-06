@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 
     if (APICallError.isInstance(err) && err.statusCode === 429) {
       return NextResponse.json(
-        { error: "Gemini's free-tier rate limit was hit for this request — wait a bit and try again." },
+        { error: "The LLM provider's rate limit was hit for this request — wait a bit and try again." },
         { status: 502 },
       );
     }

@@ -1,8 +1,8 @@
-import { google } from "@ai-sdk/google";
+import { anthropic } from "@ai-sdk/anthropic";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 
-const model = google("gemini-flash-latest");
+const model = anthropic("claude-haiku-4-5");
 
 const searchParamsSchema = z.object({
   semanticQuery: z
