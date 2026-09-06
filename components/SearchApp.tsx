@@ -4,10 +4,21 @@ import { useState, type SubmitEvent } from "react";
 import { Menu, X } from "lucide-react";
 import { toast } from "react-toastify";
 import PlaceMap, { type MapPlace } from "./PlaceMap";
+import ThemeToggle from "./ThemeToggle";
+import { formatOpeningHours } from "@/lib/format";
+
+// search_text is one continuous sentence (built for embeddings, not display) —
+// break "Hours: ..." and "Located at ..." onto their own lines for readability,
+// and convert the embedded hours to 12-hour time.
+function formatSearchTextLines(text: string): string[] {
+  return text
+    .split(/(?=\bHours:|\bLocated at\b)/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => (line.startsWith("Hours:") ? formatOpeningHours(line) : line));
+}
 
 interface PlaceResult extends MapPlace {
-  category: string | null;
-  search_text: string | null;
   similarity: number;
 }
 
@@ -32,6 +43,7 @@ export default function SearchApp() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<AskResponse | null>(null);
+  const [hasError, setHasError] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
   async function handleSubmit(e: SubmitEvent) {
@@ -40,16 +52,20 @@ export default function SearchApp() {
     if (!trimmed) return;
 
     setLoading(true);
+    setHasError(false);
 
     try {
       const res = await fetch(`/api/ask?q=${encodeURIComponent(trimmed)}`);
       const data: AskResponse = await res.json();
 
-      setResponse(data);
-      if (!res.ok) {
+      if (res.ok) {
+        setResponse(data);
+      } else {
+        setHasError(true);
         toast.error(data.error ?? "Something went wrong");
       }
     } catch {
+      setHasError(true);
       toast.error("Network error — please try again");
     } finally {
       setLoading(false);
@@ -61,63 +77,71 @@ export default function SearchApp() {
   return (
     <div className="relative h-screen w-full overflow-hidden">
       <div className="absolute inset-0">
-        <PlaceMap places={results} />
+        <PlaceMap places={results} sidebarOpen={!collapsed} />
       </div>
 
       <div
-        className={`absolute top-0 left-0 z-10 flex h-full w-96 flex-col overflow-y-auto border-r border-zinc-200 bg-white shadow-lg transition-transform duration-300 ease-in-out dark:border-zinc-800 dark:bg-zinc-950 ${
+        className={`absolute top-0 left-0 z-10 flex h-full w-96 flex-col overflow-y-auto border-r border-panel-border bg-panel shadow-lg transition-transform duration-300 ease-in-out ${
           collapsed ? "-translate-x-full" : "translate-x-0"
         }`}
       >
         <header className="px-6 py-4">
-          <h1 className="text-xl font-semibold">Omaha Place Finder</h1>
-          <p className="text-sm text-zinc-500">
-            Natural-language search over Omaha, NE — PostGIS for geography, pgvector for semantics, an LLM to tie
-            them together.
+          <div className="flex items-center justify-between gap-2">
+            <h1 className="text-xl font-semibold">Omaha Place Finder</h1>
+            <ThemeToggle />
+          </div>
+          <p className="mt-2 text-sm text-muted">
+            Natural-language place search for Omaha, NE — PostGIS for geography, pgvector for semantics, an LLM to
+            tie them together, capped at 20 results per search and rate-limited to prevent abuse.
           </p>
         </header>
 
-        <form onSubmit={handleSubmit} className="flex gap-2 border-t border-zinc-200 px-6 py-4 dark:border-zinc-800">
+        <form onSubmit={handleSubmit} className="flex gap-2 border-t border-panel-border px-6 py-4">
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="e.g. somewhere chill to grab coffee near Memorial Park"
-            className="flex-1 rounded-md border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:border-zinc-700 dark:bg-zinc-900"
+            placeholder="e.g. good food around Dundee"
+            className="flex-1 rounded-md border border-panel-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring dark:focus:shadow-[0_0_12px_var(--color-ring)]"
           />
           <button
             type="submit"
             disabled={loading}
-            className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+            className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground disabled:opacity-50 dark:shadow-[0_0_14px_rgba(187,154,247,0.35)] dark:hover:shadow-[0_0_20px_rgba(187,154,247,0.55)]"
           >
             {loading ? "Searching…" : "Search"}
           </button>
         </form>
 
-        {response?.params && (
-          <div className="border-t border-zinc-200 px-6 py-2 text-xs text-zinc-500 dark:border-zinc-800">
-            Interpreted as: <code>{JSON.stringify(response.params)}</code>
-          </div>
-        )}
-
-        <div className="flex-1 border-t border-zinc-200 dark:border-zinc-800">
+        <div className="flex-1 border-t border-panel-border">
           {results.length === 0 ? (
-            <p className="p-6 text-sm text-zinc-500">
-              {loading ? "Searching…" : "No results yet — try a search above."}
-            </p>
+            <div className="p-6 text-sm text-muted">
+              {loading ? (
+                "Searching…"
+              ) : hasError ? null : response ? (
+                <>
+                  <p>No places matched &ldquo;{response.query}&rdquo;.</p>
+                  <p className="mt-2">
+                    Try something more specific, like &ldquo;coffee shop downtown&rdquo; or &ldquo;park near
+                    Dundee&rdquo;.
+                  </p>
+                </>
+              ) : (
+                "No results yet — try a search above."
+              )}
+            </div>
           ) : (
             <ul>
               {results.map((place) => (
-                <li key={place.id} className="border-b border-zinc-200 p-4 dark:border-zinc-800">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="font-medium">{place.name ?? "Unnamed place"}</span>
-                    <span className="shrink-0 text-xs text-zinc-400">{(place.similarity * 100).toFixed(0)}%</span>
-                  </div>
-                  {place.category && (
-                    <span className="text-xs uppercase tracking-wide text-zinc-500">{place.category}</span>
-                  )}
+                <li key={place.id} className="border-b border-panel-border p-4">
+                  <div className="font-medium">{place.name ?? "Unnamed place"}</div>
+                  {place.category && <span className="text-xs uppercase tracking-wide text-muted">{place.category}</span>}
                   {place.search_text && (
-                    <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{place.search_text}</p>
+                    <div className="mt-1 text-sm text-muted">
+                      {formatSearchTextLines(place.search_text).map((line, i) => (
+                        <div key={i}>{line}</div>
+                      ))}
+                    </div>
                   )}
                 </li>
               ))}
@@ -130,7 +154,7 @@ export default function SearchApp() {
         type="button"
         onClick={() => setCollapsed((c) => !c)}
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        className={`absolute top-4 z-20 flex h-10 w-10 cursor-pointer items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-500 shadow transition-[left] duration-300 ease-in-out hover:bg-zinc-100 hover:text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 ${
+        className={`absolute top-4 z-20 flex h-10 w-10 cursor-pointer items-center justify-center rounded-md border border-panel-border bg-panel text-muted shadow transition-[left] duration-300 ease-in-out hover:text-foreground dark:hover:shadow-[0_0_10px_var(--color-ring)] ${
           collapsed ? "left-4" : "left-100"
         }`}
       >

@@ -19,7 +19,9 @@ const searchParamsSchema = z.object({
   near: z
     .string()
     .nullable()
-    .describe("The name of a landmark, park, or place the user wants to search near. Null if none was mentioned."),
+    .describe(
+      "The name of a landmark, park, business, or neighborhood/district (e.g. 'downtown', 'Old Market', 'Dundee') the user wants to search near. Extract this whenever the query names any specific area, even a broad one like 'downtown' — don't leave it folded into semanticQuery. Null only if no location was mentioned at all.",
+    ),
   radiusMeters: z
     .number()
     .int()
@@ -32,6 +34,7 @@ export type SearchParamsFromQuery = z.infer<typeof searchParamsSchema>;
 export async function understandQuery(query: string): Promise<SearchParamsFromQuery> {
   const { output } = await generateText({
     model,
+    temperature: 0,
     output: Output.object({ schema: searchParamsSchema }),
     prompt: `Extract structured place-search parameters from this user query: "${query}"`,
   });

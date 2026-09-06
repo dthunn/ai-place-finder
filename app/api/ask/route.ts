@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   if (!success) {
     const retryAfterSeconds = Math.max(0, Math.ceil((reset - Date.now()) / 1000));
     return NextResponse.json(
-      { error: "Too many requests — please wait a moment before searching again." },
+      { error: "You've reached today's search limit — please try again tomorrow." },
       { status: 429, headers: { "Retry-After": retryAfterSeconds.toString() } },
     );
   }

@@ -1,7 +1,11 @@
 import { pool } from "./db";
 import { embedText } from "./embeddings";
+import { resolveNeighborhood } from "./neighborhoods";
 
 const DEFAULT_RADIUS_METERS = 1500;
+// Below this, a match is essentially noise rather than a real semantic hit —
+// real matches score ~0.44+ in practice, irrelevant queries top out ~0.21.
+const MIN_SIMILARITY = 0.25;
 
 export interface SearchParams {
   semanticQuery: string;
@@ -15,6 +19,16 @@ export interface SearchResult {
   name: string | null;
   category: string | null;
   search_text: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  phone: string | null;
+  website: string | null;
+  opening_hours: string | null;
+  cuisine: string | null;
+  wheelchair: string | null;
+  outdoor_seating: boolean | null;
+  tags: Record<string, string>;
   lat: number;
   lon: number;
   similarity: number;
@@ -32,24 +46,32 @@ export async function searchPlaces({
 }: SearchParams): Promise<SearchOutcome> {
   let anchor: { lat: number; lon: number } | null = null;
   if (near) {
-    const { rows } = await pool.query(
-      `SELECT ST_Y(location::geometry) AS lat, ST_X(location::geometry) AS lon
-       FROM places
-       WHERE name ILIKE $1
-       ORDER BY (LOWER(name) = LOWER($2)) DESC, LENGTH(name) ASC
-       LIMIT 1`,
-      [`%${near}%`, near],
-    );
-    if (rows.length === 0) {
-      return { error: `Could not find a place matching "${near}"` };
+    anchor = resolveNeighborhood(near);
+
+    if (!anchor) {
+      const { rows } = await pool.query(
+        `SELECT ST_Y(location::geometry) AS lat, ST_X(location::geometry) AS lon
+         FROM places
+         WHERE name ILIKE $1
+         ORDER BY (LOWER(name) = LOWER($2)) DESC, LENGTH(name) ASC
+         LIMIT 1`,
+        [`%${near}%`, near],
+      );
+      if (rows.length === 0) {
+        return { error: `Could not find a place matching "${near}"` };
+      }
+      anchor = rows[0];
     }
-    anchor = rows[0];
   }
 
   const queryEmbedding = await embedText(semanticQuery);
   const vectorLiteral = `[${queryEmbedding.join(",")}]`;
 
-  const conditions = ["embedding IS NOT NULL", "name IS NOT NULL"];
+  const conditions = [
+    "embedding IS NOT NULL",
+    "name IS NOT NULL",
+    `(1 - (embedding <=> $1::vector)) > ${MIN_SIMILARITY}`,
+  ];
   const values: unknown[] = [vectorLiteral];
 
   if (category) {
@@ -75,6 +97,16 @@ export async function searchPlaces({
       name,
       category,
       search_text,
+      address,
+      city,
+      state,
+      phone,
+      website,
+      opening_hours,
+      cuisine,
+      wheelchair,
+      outdoor_seating,
+      tags,
       ST_Y(location::geometry) AS lat,
       ST_X(location::geometry) AS lon,
       1 - (embedding <=> $1::vector) AS similarity

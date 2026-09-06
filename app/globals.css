@@ -1,26 +1,195 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #18181b;
+  --panel: #ffffff;
+  --panel-border: #e4e4e7;
+  --muted: #71717a;
+  --accent: #18181b;
+  --accent-foreground: #ffffff;
+  --ring: #a1a1aa;
+}
+
+.dark {
+  --background: #0a0a12;
+  --foreground: #c0caf5;
+  --panel: #14152a;
+  --panel-border: #2a2c47;
+  --muted: #8a92c4;
+  --accent: #bb9af7;
+  --accent-foreground: #0a0a12;
+  --ring: #7dcfff;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-panel: var(--panel);
+  --color-panel-border: var(--panel-border);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-ring: var(--ring);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
+
+/* MapLibre's default control/popup chrome is hardcoded white-on-black and
+   doesn't know about our theme — restyle it to follow the same tokens. */
+.maplibregl-ctrl-attrib,
+.maplibregl-ctrl-attrib-inner,
+.maplibregl-popup-content {
+  user-select: none;
+}
+
+.maplibregl-popup-content {
+  font-family: inherit;
+  padding: 14px;
+}
+
+.maplibregl-popup-content a,
+.maplibregl-popup-content button {
+  outline: none;
+}
+
+.maplibregl-popup-content a:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.dark .maplibregl-popup-content {
+  background: var(--panel);
+  color: var(--foreground);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.dark .maplibregl-popup-anchor-top .maplibregl-popup-tip,
+.dark .maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
+.dark .maplibregl-popup-anchor-top-right .maplibregl-popup-tip {
+  border-bottom-color: var(--panel);
+}
+
+.dark .maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
+.dark .maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
+.dark .maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip {
+  border-top-color: var(--panel);
+}
+
+.dark .maplibregl-popup-anchor-left .maplibregl-popup-tip {
+  border-right-color: var(--panel);
+}
+
+.dark .maplibregl-popup-anchor-right .maplibregl-popup-tip {
+  border-left-color: var(--panel);
+}
+
+.dark .maplibregl-ctrl-group {
+  background-color: var(--panel);
+  box-shadow: 0 0 0 1px var(--panel-border);
+}
+
+.dark .maplibregl-ctrl-group button + button {
+  border-top-color: var(--panel-border);
+}
+
+.dark .maplibregl-ctrl-icon {
+  filter: invert(1);
+}
+
+/* Place popup card (see components/PlaceMap.tsx buildPopupHtml) */
+.popup-card {
+  position: relative;
+  min-width: 200px;
+  max-width: 260px;
+}
+
+.popup-block + .popup-block,
+.popup-website {
+  margin-top: 8px;
+}
+
+.popup-title {
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.3;
+  padding-right: 28px;
+}
+
+.popup-category {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+  margin-top: 2px;
+}
+
+.popup-close {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--color-muted);
+  cursor: pointer;
+  padding: 0;
+}
+
+.popup-close:hover {
+  color: var(--color-foreground);
+}
+
+.popup-description {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--color-muted);
+}
+
+.popup-details {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-muted);
+}
+
+.popup-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.popup-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  border: 1px solid var(--color-panel-border);
+  color: var(--color-muted);
+}
+
+.popup-website {
+  padding-top: 8px;
+  border-top: 1px solid var(--color-panel-border);
+}
+
+.popup-website-link {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--color-panel-border);
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
