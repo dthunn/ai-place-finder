@@ -81,7 +81,7 @@ export default function SearchApp() {
       </div>
 
       <div
-        className={`absolute top-0 left-0 z-10 flex h-full w-96 flex-col overflow-y-auto border-r border-panel-border bg-panel shadow-lg transition-transform duration-300 ease-in-out ${
+        className={`themed-scroll absolute top-0 left-0 z-10 flex h-full w-96 flex-col overflow-y-auto border-r border-panel-border bg-panel shadow-lg transition-transform duration-300 ease-in-out ${
           collapsed ? "-translate-x-full" : "translate-x-0"
         }`}
       >
